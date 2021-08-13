@@ -1,6 +1,9 @@
 #! /bin/bash
 
+# Thanks to this script you can test a writing performance to a disk (SSD) for different partition alignment settings stored in JSON config file.
+# For more information check README.md file
 
+# the colours definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 ORANGE='\033[0;33m'
@@ -12,13 +15,19 @@ SC='\033[0m' # Standard colour
 
 scriptPath=$(dirname $(realpath $0))    # full path to the directory where the script is located
 
-CONFIGFILE=$scriptPath'/config/parted-params.json'  # parameters for parted command for consecutive alignments tests
+CONFIGFILE=$scriptPath'/config/script-params.json'  # parameters for parted command for consecutive alignments tests
 
 blkDevPath=''   # a block device path of the device selected for the alignment test
 declare -a blkDevList   # an array of block devices available at the moment
 
 
-function quit_now {
+function draw_line() {
+    for num in $(seq 0 79); do echo -n '-'; done
+    echo
+}
+
+
+function quit_now { # displays nice message and quit the script
     echo -e ${BLUE}'\nI am quitting now. Have a nice day.'${YELLOW}' :-)\n'${SC}
     exit
 }
@@ -36,16 +45,16 @@ function yes_or_not() {  # gives you a choice: to continue or to quit this scrip
 }
 
 
-function preconfig() {  # gets params for parted command from file config/parted-params.json
+function preconfig() {  # gets params for parted command from $CONFIGFILE
     # read some parameters to make all the process more automatic
     if [ -f $CONFIGFILE ]
     then
         scriptConfig=$(<$CONFIGFILE)
-        jq -er '.' <<< $scriptConfig > $scriptPath'/log/jq_error.log' 2>&1
-        # to do # control access to log/jq_error.log
+        jq -er '.' <<< $scriptConfig 1>/dev/null 2> $scriptPath'/log/jq_error.log'  # write an error into log/jq_error.log file. If there is no error, it creates an empty file
         if ! [ $? -eq 0 ]   # controls whether syntax of $CONFIGFILE is correct for jq
         then
-            echo -e "\n${LRED}The config file ${BLUE} $CONFIGFILE ${LRED} is incorrectly formatted. Correct all the errors and run the script again."
+            echo -e "\n${LRED}The config file ${BLUE} $CONFIGFILE ${LRED} is incorrectly formatted. Correct all the errors and run the script again.${SC}"
+            echo -e '\nYou may find it helpful to check '${BLUE}$scriptPath'/log/jq_error.log'${SC}' file content.'
             quit_now
         fi
     else
@@ -57,6 +66,9 @@ function preconfig() {  # gets params for parted command from file config/parted
 
 function select_blk_dev_menu() {    # displays a menu for block device selection
     clear
+    echo 'This script tests a writing performance to a selected disk for partition alignment settings stored in a JSON config file.'
+    echo -e ${ORANGE}'\n!!! WARNING !!!'
+    echo -e 'Be careful !!! By mistake you may loose your data !!! You are using this script on your own responsibility !!!\n'${SC}
     mapfile blkDevList < <( lsblk --scsi --paths --noheadings --output NAME,TYPE,SIZE,MODEL )
     for item in $(seq 0 $(( ${#blkDevList[@]} - 1))) 
     do
@@ -82,7 +94,8 @@ function select_blk_dev() { # allows selecting a block device for the alignment 
     done
     (( blkDevNum-- ))    # decreases $blkDevNum by 1, as menu numbers were greater by 1 than $blkDevList array indices
     blkDevPath=$(echo ${blkDevList[$blkDevNum]} | gawk --field-separator ' ' '{print $1}')
-    echo 'blkDevPath = '$blkDevPath
+    draw_line
+    echo -e '\nYou have selected '${BLUE}${blkDevList[$blkDevNum]}
 }
 
 
@@ -98,6 +111,9 @@ function zero_blk_dev() {   # overwrite first 1MiB of selected block device with
     else
         echo -e ${LGREEN}' Done'${SC}  
     fi
+    echo -e -n '\nCreating '${BLUE}'msdos'${SC}' disk label (MBR) on disk '$blkDevPath' ...'
+    parted --script $blkDevPath mklabel msdos # creates disk label (partition table type): msdos (MBR) 
+    echo -e ${LGREEN}' Done'${SC} 
 }
 
 
@@ -110,19 +126,18 @@ function align_partition_and_test() {
         partedStartOffset=$(echo $scriptConfig | jq '.parted['$dataSetNo'].start_offset')
         partedEndOffset=$(echo $scriptConfig | jq '.parted['$dataSetNo'].end_offset')
         #--- test begins --------------------
+        draw_line 
         echo -e ${BLUE}'\nTest no. '$(( $dataSetNo + 1 ))
-        echo -e ${SC}'Alignment Type: '${ORANGE}$partedAlignmentType
+        echo -e ${SC}'\nAlignment Type: '${ORANGE}$partedAlignmentType
         echo -e ${SC}'Unit: '${ORANGE}$partedUnit
         echo -e ${SC}'Start Offset: '${ORANGE}$partedStartOffset
         echo -e ${SC}'End Offset: '${ORANGE}$partedEndOffset${SC}
-        parted --script $blkDevPath mklabel msdos # creates disk label (partition table type): msdos (MBR) 
         parted --script --align $partedAlignmentType $blkDevPath unit $partedUnit mkpart primary $partedStartOffset $partedEndOffset
-        #parted $blkDevPath unit s print
-        #sudo dd if=/dev/zero of=$(echo $blkDevPath'1') bs=4M count=250 conv=fdatasync,notrunc
-        #sudo dd if=/dev/zero of=$(echo $blkDevPath'1') bs=4M count=250 conv=nocreat
-        sudo dd if=/dev/zero of=$(echo $blkDevPath'1') bs=4M count=250
+        echo -e '\nWriting test result by '${BLUE}'dd'${SC}': '
+        dd if=/dev/zero of=$(echo $blkDevPath'1') bs=1M count=10
+        echo -e '\nDisk info by '${BLUE}'parted'${SC}': '
         parted $blkDevPath unit s print
-        parted $blkDevPath rm 1
+        parted --script $blkDevPath rm 1
     done 
 }
 
