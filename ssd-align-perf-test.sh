@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# Thanks to this script you can test a writing performance to a disk (SSD) for different partition alignment settings stored in JSON config file.
+# Thanks to this script you can test a writing performance to a disk (SSD) with different partition alignment settings stored in JSON config file.
 # For more information check README.md file
 
 # the colours definitions
@@ -21,7 +21,7 @@ blkDevPath=''   # a block device path of the device selected for the alignment t
 declare -a blkDevList   # an array of block devices available at the moment
 
 
-function draw_line() {
+function draw_line() {  # it draws a line made of 80 hyphens
     for num in $(seq 0 79); do echo -n '-'; done
     echo
 }
@@ -42,6 +42,15 @@ function yes_or_not() {  # gives you a choice: to continue or to quit this scrip
         read yn
         if [[ "${yn,,}" = "no" ]]; then quit_now; fi
     done
+}
+
+
+function check_if_root() {  # checks if script is being run by a user having root privileges
+    if [ ! $(id -u) -eq 0 ] 
+    then 
+        echo -e ${ORANGE}'\nYou must have a root privileges to run this script !!!'${SC}
+        quit_now
+    fi
 }
 
 
@@ -66,7 +75,7 @@ function preconfig() {  # gets params for parted command from $CONFIGFILE
 
 function select_blk_dev_menu() {    # displays a menu for block device selection
     clear
-    echo 'This script tests a writing performance to a selected disk for partition alignment settings stored in a JSON config file.'
+    echo 'This script tests a writing performance to a selected disk with the partition alignment settings stored in a JSON config file.'
     echo -e ${ORANGE}'\n!!! WARNING !!!'
     echo -e 'Be careful !!! By mistake you may loose your data !!! You are using this script on your own responsibility !!!\n'${SC}
     mapfile blkDevList < <( lsblk --scsi --paths --noheadings --output NAME,TYPE,SIZE,MODEL )
@@ -121,26 +130,39 @@ function align_partition_and_test() {
     # echo $scriptConfig | jq '.parted[0]'
     for dataSetNo in $(seq 0 $(( $(echo $scriptConfig | jq '.parted' | jq 'length') -1 )))
     do
+        # --- begin --- assign settings to the variables
         partedAlignmentType=$(echo $scriptConfig | jq '.parted['$dataSetNo'].align' | sed 's/\"//g')
         partedUnit=$(echo $scriptConfig | jq '.parted['$dataSetNo'].unit' | sed 's/\"//g')
         partedStartOffset=$(echo $scriptConfig | jq '.parted['$dataSetNo'].start_offset')
         partedEndOffset=$(echo $scriptConfig | jq '.parted['$dataSetNo'].end_offset')
-        #--- test begins --------------------
+        # --- end --- assign settings to the variables
+
+        # --- begin --- exposes the partition/alignment settings 
         draw_line 
         echo -e ${BLUE}'\nTest no. '$(( $dataSetNo + 1 ))
         echo -e ${SC}'\nAlignment Type: '${ORANGE}$partedAlignmentType
         echo -e ${SC}'Unit: '${ORANGE}$partedUnit
         echo -e ${SC}'Start Offset: '${ORANGE}$partedStartOffset
         echo -e ${SC}'End Offset: '${ORANGE}$partedEndOffset${SC}
+        # --- end --- exposes the partition/alignment settings 
+        
+        # creates a primary partition due to the settings read from $CONFIGFILE
         parted --script --align $partedAlignmentType $blkDevPath unit $partedUnit mkpart primary $partedStartOffset $partedEndOffset
+        
+        # --- begin --- performs a writing test of 1GiB by dd to the newly created partition, and prints the results
         echo -e '\nWriting test result by '${BLUE}'dd'${SC}': '
-        dd if=/dev/zero of=$(echo $blkDevPath'1') bs=1M count=10
+        dd if=/dev/zero of=$(echo $blkDevPath'1') bs=1M count=1000
+        # --- end --- performs a writing test of 1GiB by dd to the newly created partition, and prints the results
+
+        # --- begin --- prints partition info with sector as a parted's unit, and then, removes this partition 
         echo -e '\nDisk info by '${BLUE}'parted'${SC}': '
         parted $blkDevPath unit s print
         parted --script $blkDevPath rm 1
+        # --- end --- prints partition info with sector as a parted's unit, and then, removes this partition 
     done 
 }
 
+check_if_root
 preconfig
 select_blk_dev
 zero_blk_dev
