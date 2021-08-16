@@ -16,6 +16,7 @@ SC='\033[0m' # Standard colour
 scriptPath=$(dirname $(realpath $0))    # full path to the directory where the script is located
 
 CONFIGFILE=$scriptPath'/config/script-params.json'  # parameters for parted command for consecutive alignments tests
+JQERRORLOG=$scriptPath'/log/jq_error.log'
 
 blkDevPath=''   # a block device path of the device selected for the alignment test
 declare -a blkDevList   # an array of block devices available at the moment
@@ -56,14 +57,15 @@ function check_if_root() {  # checks if script is being run by a user having roo
 
 function preconfig() {  # gets params for parted command from $CONFIGFILE
     # read some parameters to make all the process more automatic
+    if ! [ -d $scriptPath'/log' ]; then mkdir $scriptPath'/log'; fi   # create log/ directory, if it does not exist
     if [ -f $CONFIGFILE ]
     then
         scriptConfig=$(<$CONFIGFILE)
-        jq -er '.' <<< $scriptConfig 1>/dev/null 2> $scriptPath'/log/jq_error.log'  # write an error into log/jq_error.log file. If there is no error, it creates an empty file
+        jq -er '.' <<< $scriptConfig 1>/dev/null 2> ${JQERRORLOG}  # write an error into $JQERRORLOG file. If there is no error, it creates an empty file
         if ! [ $? -eq 0 ]   # controls whether syntax of $CONFIGFILE is correct for jq
         then
             echo -e "\n${LRED}The config file ${BLUE} $CONFIGFILE ${LRED} is incorrectly formatted. Correct all the errors and run the script again.${SC}"
-            echo -e '\nYou may find it helpful to check '${BLUE}$scriptPath'/log/jq_error.log'${SC}' file content.'
+            echo -e '\nYou may find it helpful to check '${BLUE}${JQERRORLOG}${SC}' file content.'
             quit_now
         fi
     else
