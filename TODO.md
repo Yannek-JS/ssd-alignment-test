@@ -1,4 +1,4 @@
-Things TO DO with the script.
+**Things TO DO with the script.**
 
 It is a random sequence. It does not mean that the first item on the list will be deployed firstly.
 
@@ -8,6 +8,6 @@ It is a random sequence. It does not mean that the first item on the list will b
 4. Control whether writing access is possible in directory log/ .
 5. Forbid writing the first sectors of a disk.
 6. Add another configuration parameters to JSON config file:
-    - size of data (zeros)  writing to the tested disk. Partition size should be enumerated respectively to this value. Accuracy of this data should be controlled too.
+    * size of data (zeros)  writing to the tested disk. Partition size should be enumerated respectively to this value. Accuracy of this data should be controlled too.
 
 
