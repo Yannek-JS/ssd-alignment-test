@@ -6,7 +6,7 @@
 
 **!!! WARNING !!!**
 
-**The script destroys the content of a tested disk. Be careful using it. You may loose your data.**
+**The script destroys the content of a tested disk. Be careful using it. You may loose your data by mistake.**
 
 **You use this script on your own responsibility !!!**
 
