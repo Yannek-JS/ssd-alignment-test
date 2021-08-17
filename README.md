@@ -1,10 +1,10 @@
-ssd-align-perf-test.sh
+**ssd-align-perf-test.sh**
 
-ssd-align-perf-test.sh is the bash script for testing purposes. It facilitates you to test a writing performance on SSD with different partition alignment settings. It uses parted to create a partition, a config JSON file to provide parted with different partition alignment settings, and dd to test writing performance.
+ssd-align-perf-test.sh is the bash script for testing purposes. It facilitates writing performance tests on SSD with different partition alignment settings. It uses parted to create a partition, a config JSON file to provide parted with different partition alignment settings, and dd to test writing performance.
 
-!!! WARNING !!!
-The script destroys the content of a tested disk. Be careful using it. You may loose your data. 
-You use this script on your own responsibility !!! 
+<h3>!!! WARNING !!!</h3>
+**The script destroys the content of a tested disk. Be careful using it. You may loose your data. You use this script on your own responsibility !!!**
+
 
 The script is on early development stage. Though it is fully functional, it still needs many improvements. List of the things that are to to is contained in TODO.md file.
 
