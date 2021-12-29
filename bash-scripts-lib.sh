@@ -1,5 +1,13 @@
 #! /bin/bash
 
+###############################################################
+# This script contains the Bash code portions commonly 
+# used in other Yannek-JS Bash projects.
+#
+# Visit https://github.com/Yannek-JS/bash-scripts-lib
+# for the most recent script release
+############################################################### 
+
 # the colours definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
